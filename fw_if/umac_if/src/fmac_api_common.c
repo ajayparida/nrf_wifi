@@ -276,6 +276,7 @@ enum nrf_wifi_status nrf_wifi_fmac_fw_chunk_load(struct nrf_wifi_fmac_dev_ctx *f
 				       fw_chunk->size);
 }
 
+#ifndef CONFIG_NRF71_ON_IPC
 enum nrf_wifi_status nrf_wifi_fmac_fw_load(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 					   struct nrf_wifi_fmac_fw_info *fmac_fw)
 {
@@ -344,7 +345,7 @@ enum nrf_wifi_status nrf_wifi_fmac_fw_load(struct nrf_wifi_fmac_dev_ctx *fmac_de
 out:
 	return status;
 }
-
+#endif /* !CONFIG_NRF71_ON_IPC */
 
 struct nrf_wifi_fmac_dev_ctx *nrf_wifi_fmac_dev_add(struct nrf_wifi_fmac_priv *fpriv,
 						    void *os_dev_ctx)
@@ -475,7 +476,7 @@ enum nrf_wifi_status nrf_wifi_fmac_ver_get(struct nrf_wifi_fmac_dev_ctx *fmac_de
 					  unsigned int *fw_ver)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
-
+#ifndef CONFIG_NRF71_ON_IPC
 	status = hal_rpu_mem_read(fmac_dev_ctx->hal_dev_ctx,
 				  fw_ver,
 				  RPU_MEM_UMAC_VER,
@@ -486,8 +487,11 @@ enum nrf_wifi_status nrf_wifi_fmac_ver_get(struct nrf_wifi_fmac_dev_ctx *fmac_de
 				      __func__);
 		goto out;
 	}
-
 out:
+#else
+	*fw_ver = 0x01020304;
+	status = NRF_WIFI_STATUS_SUCCESS;
+#endif /* !CONFIG_NRF71_ON_IPC */
 	return status;
 }
 
@@ -514,7 +518,7 @@ enum nrf_wifi_status nrf_wifi_fmac_conf_srcoex(struct nrf_wifi_fmac_dev_ctx *fma
 	return status;
 }
 #endif /* NRF70_OFFLOADED_RAW_TX */
-
+#ifndef CONFIG_NRF71_ON_IPC
 enum nrf_wifi_status nrf_wifi_fmac_otp_mac_addr_get(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 						    unsigned char vif_idx,
 						    unsigned char *mac_addr)
@@ -579,6 +583,7 @@ enum nrf_wifi_status nrf_wifi_fmac_otp_mac_addr_get(struct nrf_wifi_fmac_dev_ctx
 out:
 	return status;
 }
+#endif /*! CONFIG_NRF71_ON_IPC */
 
 enum nrf_wifi_status nrf_wifi_fmac_rf_params_get(
 		struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
