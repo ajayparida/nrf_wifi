@@ -104,6 +104,9 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	unsigned int len = 0;
 	struct nrf_wifi_fmac_priv_def *def_priv = NULL;
 
+	nrf_wifi_osal_log_info("%s: Initializing UMAC",
+			       __func__);
+
 	def_priv = wifi_fmac_priv(fmac_dev_ctx->fpriv);
 
 	len = sizeof(*umac_cmd_data);
@@ -153,7 +156,7 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	umac_cmd_data->watchdog_timer_val = 0xFFFFFF;
 #endif /* NRF_WIFI_RPU_RECOVERY */
 
-	nrf_wifi_osal_log_dbg("RPU LPM type: %s",
+	nrf_wifi_osal_log_info("RPU LPM type: %s",
 		umac_cmd_data->sys_params.sleep_enable == 2 ? "HW" :
 		umac_cmd_data->sys_params.sleep_enable == 1 ? "SW" : "DISABLED");
 
@@ -226,6 +229,9 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 					    umac_cmd,
 					    (sizeof(*umac_cmd) + len));
 
+	nrf_wifi_osal_log_info("%s: Command %d sent to RPU",
+			       __func__,
+			       umac_cmd_data->sys_head.cmd_event);
 out:
 	return status;
 }

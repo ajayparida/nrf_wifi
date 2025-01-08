@@ -1005,6 +1005,8 @@ static enum nrf_wifi_status umac_process_sys_events(struct nrf_wifi_fmac_dev_ctx
 	case NRF_WIFI_EVENT_INIT_DONE:
 		fmac_dev_ctx->fw_init_done = 1;
 		status = NRF_WIFI_STATUS_SUCCESS;
+		nrf_wifi_osal_log_info("%s: FMAC FW init done",
+				      __func__);
 		break;
 	case NRF_WIFI_EVENT_DEINIT_DONE:
 		fmac_dev_ctx->fw_deinit_done = 1;
