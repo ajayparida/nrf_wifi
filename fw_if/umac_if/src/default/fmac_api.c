@@ -23,7 +23,7 @@
 #include "fmac_event.h"
 #include "fmac_bb.h"
 #include "util.h"
-
+volatile static unsigned int loop_cnt = 0;
 
 unsigned char nrf_wifi_fmac_vif_idx_get(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx)
 {
@@ -253,26 +253,38 @@ static enum nrf_wifi_status nrf_wifi_fmac_fw_init(struct nrf_wifi_fmac_dev_ctx *
 #endif /* NRF70_DATA_TX */
 		goto out;
 	}
+
+	nrf_wifi_osal_log_info("%s: Waiting for UMAC init...", __func__);
 	start_time_us = nrf_wifi_osal_time_get_curr_us();
+
 	while (!fmac_dev_ctx->fw_init_done) {
+
 		nrf_wifi_osal_sleep_ms(1);
+		nrf_wifi_osal_log_info("%s: Waiting for UMAC init...%d", __func__, loop_cnt++);
+		if (nrf_wifi_osal_time_elapsed_us(start_time_us) % 1000000 == 0) {
+			nrf_wifi_osal_log_err("%s: Waiting for UMAC init... %lu seconds elapsed", __func__, nrf_wifi_osal_time_elapsed_us(start_time_us) / 1000000);
+		}
 #define MAX_INIT_WAIT (5 * 1000 * 1000)
 		if (nrf_wifi_osal_time_elapsed_us(start_time_us) >= MAX_INIT_WAIT) {
+			nrf_wifi_osal_log_err("%s: Waiting for UMAC init timed out",
+						  __func__);
 			break;
 		}
 	}
 
 	if (!fmac_dev_ctx->fw_init_done) {
 		nrf_wifi_osal_log_err("%s: UMAC init timed out",
-				      __func__);
+					  __func__);
 		nrf_wifi_fmac_deinit_rx(fmac_dev_ctx);
 #ifdef NRF70_DATA_TX
 		nrf_wifi_fmac_deinit_tx(fmac_dev_ctx);
 #endif /* NRF70_DATA_TX */
 		status = NRF_WIFI_STATUS_FAIL;
 		goto out;
+	} else {
+		nrf_wifi_osal_log_info("%s: UMAC init completed successfully",
+					  __func__);
 	}
-
 	status = NRF_WIFI_STATUS_SUCCESS;
 
 out:

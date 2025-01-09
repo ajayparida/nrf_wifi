@@ -93,20 +93,22 @@ static enum nrf_wifi_status nrf_wifi_fmac_off_raw_tx_fw_init(
 	}
 
 	start_time_us = nrf_wifi_osal_time_get_curr_us();
+	nrf_wifi_osal_log_info("%s: Waiting for firmware initialization to complete", __func__);
 	while (!fmac_dev_ctx->fw_init_done) {
 		nrf_wifi_osal_sleep_ms(1);
 #define MAX_INIT_WAIT (5 * 1000 * 1000)
 		if (nrf_wifi_osal_time_elapsed_us(start_time_us) >= MAX_INIT_WAIT) {
+			nrf_wifi_osal_log_info("%s: Firmware initialization wait time exceeded", __func__);
 			break;
 		}
 	}
 
 	if (!fmac_dev_ctx->fw_init_done) {
-		nrf_wifi_osal_log_err("%s: UMAC init timed out",
-				      __func__);
+		nrf_wifi_osal_log_err("%s: UMAC init timed out", __func__);
 		status = NRF_WIFI_STATUS_FAIL;
 		goto out;
 	}
+	nrf_wifi_osal_log_info("%s: Firmware initialization completed successfully", __func__);
 
 	status = NRF_WIFI_STATUS_SUCCESS;
 out:

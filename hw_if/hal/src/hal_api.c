@@ -1466,20 +1466,18 @@ out:
 enum nrf_wifi_status nrf_wifi_hal_ipc_msg_handler(void *priv)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
-
 	struct nrf_wifi_hal_dev_ctx *hal_dev_ctx = (struct nrf_wifi_hal_dev_ctx *) priv;
+	void *event_data = hal_dev_ctx->ipc_msg;
+	// IPC message is a pointer to packet ram address so the len is not relevant
+	unsigned int event_len = sizeof(event_data);
 
-        void *event_data = hal_dev_ctx->ipc_msg;
+	nrf_wifi_osal_log_info("%s: IPC message received\n", __func__);
+	// intr_callbk_fn == wifi_nrf_fmac_event_callback
+	status = hal_dev_ctx->hpriv->intr_callbk_fn(hal_dev_ctx->mac_dev_ctx,
+														event_data,
+														event_len);
 
-        // IPC message is a pointer to packet ram address so the len is not relevant
-        unsigned int event_len = sizeof(event_data);
-
-        // intr_callbk_fn == wifi_nrf_fmac_event_callback
-        status = hal_dev_ctx->hpriv->intr_callbk_fn(hal_dev_ctx->mac_dev_ctx,
-                                                            event_data,
-                                                            event_len);
-
-        return status;
+	return status;
 }
 #endif /* CONFIG_NRF71_ON_IPC */
 
