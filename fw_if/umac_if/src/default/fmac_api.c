@@ -258,16 +258,8 @@ static enum nrf_wifi_status nrf_wifi_fmac_fw_init(struct nrf_wifi_fmac_dev_ctx *
 	start_time_us = nrf_wifi_osal_time_get_curr_us();
 
 	while (!fmac_dev_ctx->fw_init_done) {
-		/* Sleep doesn't work in TLM, it gets stuck */
-#ifndef CONFIG_EMULATOR_SYSTEMC
+
 		nrf_wifi_osal_sleep_ms(1);
-#else
-		// Busy loop for 1ms
-		unsigned long busy_start_time_us = nrf_wifi_osal_time_get_curr_us();
-		while (nrf_wifi_osal_time_elapsed_us(busy_start_time_us) < 1000) {
-			// Do nothing, just wait
-		}
-#endif /* CONFIG_EMULATOR_SYSTEMC */
 		nrf_wifi_osal_log_info("%s: Waiting for UMAC init...%d", __func__, loop_cnt++);
 		if (nrf_wifi_osal_time_elapsed_us(start_time_us) % 1000000 == 0) {
 			nrf_wifi_osal_log_err("%s: Waiting for UMAC init... %lu seconds elapsed", __func__, nrf_wifi_osal_time_elapsed_us(start_time_us) / 1000000);
