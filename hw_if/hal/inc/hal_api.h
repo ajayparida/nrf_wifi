@@ -333,4 +333,9 @@ enum nrf_wifi_status nrf_wifi_hal_otp_ft_prog_ver_get(struct nrf_wifi_hal_dev_ct
 enum nrf_wifi_status nrf_wifi_hal_otp_pack_info_get(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx,
 			unsigned int *package_info);
 
+#ifdef NRF_WIFI_RX_BUFF_PROG_UMAC
+unsigned long nrf_wifi_hal_get_buf_map_rx(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx,
+                                          unsigned int pool_id,
+                                          unsigned int buf_id);
+#endif /*NRF_WIFI_RX_BUFF_PROG_UMAC */
 #endif /* __HAL_API_H__ */

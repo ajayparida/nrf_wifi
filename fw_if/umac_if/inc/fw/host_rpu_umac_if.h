@@ -150,6 +150,8 @@ enum nrf_wifi_umac_commands {
 	NRF_WIFI_UMAC_CMD_CONFIG_QUIET_PERIOD,
 	/** Command to specify power save exit strategy */
 	NRF_WIFI_UMAC_CMD_PS_EXIT_STRATEGY,
+	/** Send RX Buffers to UMAC  */
+        NRF_WIFI_UMAC_CMD_CONFIG_RX_BUF,
 };
 
  /**
@@ -3546,5 +3548,27 @@ struct nrf_wifi_cmd_ps_exit_strategy {
 	/** Power save exit strategy */
 	unsigned char ps_exit_strategy;
 } __NRF_WIFI_PKD;
+
+/**
+ * @brief This structure represents rx buffer info.
+ */
+struct nrf_wifi_rx_buf {
+	/** Buffer address */
+        unsigned int skb_pointer;
+	/** Buffer associated descriptor number */
+        unsigned short skb_desc_no;
+}__NRF_WIFI_PKD;
+
+/**
+ * @brief This structure defines the command used to send rx buffer information.
+ */
+struct nrf_wifi_cmd_rx_buf_info {
+	/** Header nrf_wifi_umac_hdr */
+	struct nrf_wifi_umac_hdr umac_hdr;
+	/** Number of bufeers in the command */
+	unsigned int rx_buf_num;
+	/** Buffers information */
+	struct nrf_wifi_rx_buf info[0];
+}__NRF_WIFI_PKD;
 
 #endif /* __HOST_RPU_UMAC_IF_H */

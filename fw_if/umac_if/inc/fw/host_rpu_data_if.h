@@ -35,7 +35,7 @@ enum nrf_wifi_umac_data_commands {
 	/** TX done event @ref nrf_wifi_tx_buff_done */
 	NRF_WIFI_CMD_TX_BUFF_DONE,
 	/** RX packet event @ref nrf_wifi_rx_buff*/
-	NRF_WIFI_CMD_RX_BUFF,
+	NRF_WIFI_NRF_WIFI_RX_BUFF_PROG_UMAC,
 	/** Event to indicate interface is operational
 	 *  @ref nrf_wifi_data_carrier_state
 	 */
@@ -189,7 +189,7 @@ struct nrf_wifi_rx_buff_info {
 } __NRF_WIFI_PKD;
 
 /**
- * @brief This structure represents RX data event(NRF_WIFI_CMD_RX_BUFF).
+ * @brief This structure represents RX data event(NRF_WIFI_NRF_WIFI_RX_BUFF_PROG_UMAC).
  *
  */
 struct nrf_wifi_rx_buff {
