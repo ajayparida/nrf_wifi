@@ -70,13 +70,19 @@ unsigned long nrf_wifi_fmac_get_rx_buf_map_addr(struct nrf_wifi_fmac_dev_ctx *fm
 
 	rx_buf_info = &def_dev_ctx->rx_buf_info[desc_id];
 	if (rx_buf_info->mapped) {
+		/**
+		 * Get the nwb->data pointer to be programmed to the UMAC/LMAC.
+		 * Do not send nwb pointer to UMAC/LMAC.
+		 * TODO: This code needs to be moved up and merged with init_rx code?
+		 */
+		nwb_data = (unsigned long)nrf_wifi_osal_nbuf_data_get((void *)rx_buf_info->nwb);
 #ifdef REQUIRED?
 		phy_addr =  nrf_wifi_hal_get_buf_map_rx(fmac_dev_ctx->hal_dev_ctx,
 					    pool_info.pool_id,
 					    pool_info.buf_id);
 		return phy_addr;
 #endif
-		return rx_buf_info->nwb;
+		return nwb_data;
 	} else {
 		nrf_wifi_osal_log_err("%s: rx buffer not mapped  for desc_id= %d\n",
 				      __func__,
@@ -168,7 +174,18 @@ enum nrf_wifi_status nrf_wifi_fmac_rx_cmd_send(struct nrf_wifi_fmac_dev_ctx *fma
 		rx_cmd.addr = (unsigned int)nwb_data;
 #endif /* CONFIG_NRF71_ON_IPC */
 #ifdef NRF_WIFI_RX_BUFF_PROG_UMAC
-		rx_buf_info->nwb =  (unsigned int)nwb_data;
+		/**
+		 * Do not map nwb_data to rx_buf_info here. Map nwb. Driver
+		 * always maps from network buffer pointer. nwb->data pointer
+		 * is offset from nwb pointer. nwb has length and other fields
+		 * which are overwritten if nwb pointer is set to nwb->data and
+		 * sent to Firmware particularly when firmware provides packet
+		 * to driver for Wezen on RX.
+		 * TODO: If this feature is standalone and not only for Wezen,
+		 * It needs to be relooked to map for Wezen and other products
+		 * properly.
+		 */
+		rx_buf_info->nwb =  (unsigned int)nwb;
 		rx_buf_info->mapped = true;
 #else
 		status = nrf_wifi_hal_data_cmd_send(fmac_dev_ctx->hal_dev_ctx,
@@ -311,6 +328,7 @@ enum nrf_wifi_status nrf_wifi_fmac_rx_event_process(struct nrf_wifi_fmac_dev_ctx
 		desc_id = config->rx_buff_info[i].descriptor_id;
 		pkt_len = config->rx_buff_info[i].rx_pkt_len;
 
+
 		if (desc_id >= def_priv->num_rx_bufs) {
 			nrf_wifi_osal_log_err("%s: Invalid desc_id %d",
 					      __func__,
@@ -347,12 +365,20 @@ enum nrf_wifi_status nrf_wifi_fmac_rx_event_process(struct nrf_wifi_fmac_dev_ctx
 		rx_buf_info = &def_dev_ctx->rx_buf_info[desc_id];
 		nwb = (void *)rx_buf_info->nwb;
 
+		/**
+		 * For Wezen the RX_BUF_HEADROOM does not seem to be needed.
+		 * Remove the same. What parameters does RX_BUF_HEADROOM have??
+		 */
+#ifndef CONFIG_NRF71_ON_IPC
 		nrf_wifi_osal_nbuf_data_put(nwb,
 					    pkt_len + RX_BUF_HEADROOM);
 		nrf_wifi_osal_nbuf_data_pull(nwb,
 					     RX_BUF_HEADROOM);
+#else
+		nrf_wifi_osal_nbuf_data_put(nwb,
+					    pkt_len);
+#endif
 		nwb_data = nrf_wifi_osal_nbuf_data_get(nwb);
-
 		rx_buf_info->nwb = 0;
 		rx_buf_info->mapped = false;
 
