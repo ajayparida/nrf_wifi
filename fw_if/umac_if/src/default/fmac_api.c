@@ -296,7 +296,6 @@ static enum nrf_wifi_status nrf_wifi_fmac_fw_init(struct nrf_wifi_fmac_dev_ctx *
 
 	for (desc_id = 0; desc_id < def_priv->num_rx_bufs; desc_id++) {
 		buf_addr = (unsigned int) nrf_wifi_fmac_get_rx_buf_map_addr(fmac_dev_ctx, desc_id);
-		nrf_wifi_osal_log_err("%s:desc_id = %d buf_addr=%x", __func__, desc_id, buf_addr);
 		if (buf_addr) {
 			rx_buf_info_iter->skb_pointer = buf_addr;
 			rx_buf_info_iter->skb_desc_no = desc_id;
