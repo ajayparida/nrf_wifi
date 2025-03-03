@@ -1251,6 +1251,15 @@ out:
 }
 #endif /* NRF70_RAW_DATA_RX || NRF70_PROMISC_DATA_RX */
 
+enum nrf_wifi_status nrf_wifi_fmac_set_loopback_mode(void *dev_ctx,
+						     unsigned char if_idx,
+						     unsigned char loopback_mode)
+{
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
+	/* need to fill data */
+	return status;
+}
+
 enum nrf_wifi_status nrf_wifi_fmac_stats_reset(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
