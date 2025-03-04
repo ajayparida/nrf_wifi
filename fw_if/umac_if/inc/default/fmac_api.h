@@ -881,6 +881,9 @@ enum nrf_wifi_status nrf_wifi_fmac_twt_teardown(void *fmac_dev_ctx,
 enum nrf_wifi_status nrf_wifi_fmac_get_conn_info(void *fmac_dev_ctx,
 						unsigned char if_idx);
 
+enum nrf_wifi_status nrf_wifi_fmac_set_loopback_mode(void *fmac_dev_ctx,
+						     unsigned char if_idx,
+						     unsigned char loopback_mode);
 /**
  * @brief De-initialize the UMAC IF layer.
  * @param fpriv Pointer to the context of the UMAC IF layer.

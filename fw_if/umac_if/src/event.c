@@ -669,6 +669,7 @@ nrf_wifi_fmac_data_event_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		}
 		nrf_wifi_osal_tasklet_schedule(def_dev_ctx->tx_done_tasklet);
 #else
+		nrf_wifi_osal_log_err("%s: nrf_wifi_fmac_tx_done_event_process called",__func__);
 		status = nrf_wifi_fmac_tx_done_event_process(fmac_dev_ctx,
 								umac_head);
 #endif /* NRF70_TX_DONE_WQ_ENABLED */
@@ -1034,6 +1035,7 @@ static enum nrf_wifi_status umac_process_sys_events(struct nrf_wifi_fmac_dev_ctx
 #endif
 #ifdef NRF70_RAW_DATA_TX
 	case NRF_WIFI_EVENT_RAW_TX_DONE:
+		nrf_wifi_osal_log_info("%s: RAW TX Done Event Received", __func__);
 		status = nrf_wifi_fmac_rawtx_done_event_process(fmac_dev_ctx,
 						(struct nrf_wifi_event_raw_tx_done *)sys_head);
 		break;

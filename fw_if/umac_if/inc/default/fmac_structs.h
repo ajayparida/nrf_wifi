@@ -447,6 +447,11 @@ struct raw_tx_stats {
 };
 #endif /* NRF70_RAW_DATA_TX */
 
+struct raw_throughput_cnt {
+	unsigned long raw_bytes_sent;
+	unsigned int num_of_packets;
+};
+
 /**
  * @brief Structure to hold per device context information for the UMAC IF layer.
  *
@@ -486,6 +491,7 @@ struct nrf_wifi_fmac_dev_ctx_def {
 	struct raw_tx_pkt_header raw_tx_config;
 	struct raw_tx_stats raw_pkt_stats;
 #endif /* NRF70_RAW_DATA_TX */
+	struct raw_throughput_cnt throughput;
 };
 
 /**

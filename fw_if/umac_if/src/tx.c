@@ -595,6 +595,7 @@ enum nrf_wifi_status rawtx_cmd_prep_callbk_fn(void *callbk_data,
 	tx_buf_info->mapped = true;
 	config->raw_tx_info.frame_ddr_pointer = (unsigned long long)phy_addr;
 #else
+	nrf_wifi_osal_log_info("%s: frame pointer for data is 0x%x", __func__, nwb_data);
         config->raw_tx_info.frame_ddr_pointer =  (unsigned long long)nwb_data;
 #endif /* !CONFIG_NRF71_ON_IPC */
 	info->num_tx_pkts++;
@@ -730,6 +731,7 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 	config->sys_head.len = sizeof(*config);
 	config->if_index = vif_id;
 	config->raw_tx_info.desc_num = desc;
+	nrf_wifi_osal_log_info("%s: desc number at raw tx is %d", __func__, desc);
 	config->raw_tx_info.queue_num = def_dev_ctx->raw_tx_config.queue;
 	if (len != def_dev_ctx->raw_tx_config.packet_length) {
 		goto err;
@@ -909,6 +911,7 @@ enum nrf_wifi_status rawtx_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 					    umac_cmd,
 					    (sizeof(*umac_cmd) + len));
 
+	nrf_wifi_osal_log_info("%s: nrf_wifi_hal_ctrl_cmd_send : status = %d", __func__, status);
 	/* clear the raw tx config data */
 	nrf_wifi_osal_mem_set(&def_dev_ctx->raw_tx_config,
 			      0, sizeof(struct raw_tx_pkt_header));
@@ -1112,6 +1115,8 @@ enum nrf_wifi_fmac_tx_status tx_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_c
 		}
 
 		if (aggr_status) {
+		nrf_wifi_osal_log_err("%s: aggregation status is true", __func__);
+			
 			max_cmds = def_priv->data_config.max_tx_aggregation;
 
 			if (nrf_wifi_utils_q_len(pend_pkt_q) < max_cmds) {
@@ -1121,6 +1126,7 @@ enum nrf_wifi_fmac_tx_status tx_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_c
 	}
 	return NRF_WIFI_FMAC_TX_STATUS_SUCCESS;
 out:
+	nrf_wifi_osal_log_err("%s: packet is getting queued", __func__);
 	return NRF_WIFI_FMAC_TX_STATUS_QUEUED;
 err:
 	return NRF_WIFI_FMAC_TX_STATUS_FAIL;
@@ -1229,6 +1235,7 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	def_priv = wifi_fmac_priv(fmac_dev_ctx->fpriv);
 
 	desc = tx_desc_num;
+	nrf_wifi_osal_log_info("%s: tx desc num is %d", __func__, desc);
 
 	if (desc > def_priv->num_tx_tokens) {
 		nrf_wifi_osal_log_err("Invalid desc");
@@ -1275,11 +1282,19 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 
 	while (nrf_wifi_utils_q_len(nwb_list)) {
 		nwb = nrf_wifi_utils_q_dequeue(nwb_list);
-
+		
 		if (!nwb) {
 			continue;
 		}
 
+		/**
+		 * For Throughput measurement - vivek
+		 * get the packet size here from network buffer
+		 * and check what is the packet size
+		 * being sent out in the last sent packet
+		 */
+/*		nrf_wifi_osal_log_err("%s: data size of tx done packet is %d", nrf_wifi_osal_nbuf_data_size(nwb));*/
+		def_dev_ctx->throughput.raw_bytes_sent = nrf_wifi_osal_nbuf_data_size(nwb);
 		nrf_wifi_osal_nbuf_free(nwb);
 		pkt++;
 	}
