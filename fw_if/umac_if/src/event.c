@@ -641,6 +641,7 @@ nrf_wifi_fmac_data_event_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		}
 		nrf_wifi_osal_tasklet_schedule(def_dev_ctx->rx_tasklet);
 #else
+	/*	nrf_wifi_osal_log_info("%s: RX Event received", __func__);*/
 		status = nrf_wifi_fmac_rx_event_process(fmac_dev_ctx,
 							umac_head);
 #endif /* NRF70_RX_DONE_WQ_ENABLED */
