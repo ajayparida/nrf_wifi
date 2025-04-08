@@ -1078,6 +1078,9 @@ enum nrf_wifi_status nrf_wifi_fmac_prog_rx_buf_info(void *fmac_dev_ctx,
 					       struct nrf_wifi_rx_buf *rx_buf,
 					       unsigned int num_buffs);
 #endif /*NRF_WIFI_RX_BUFF_PROG_UMAC*/
+
+enum nrf_wifi_status nrf_wifi_fmac_get_throughput_bytes(void *dev_ctx,
+							unsigned int *throughput_bytes);
 /**
  * @}
  */

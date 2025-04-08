@@ -448,6 +448,7 @@ struct raw_tx_stats {
 #endif /* NRF70_RAW_DATA_TX */
 
 struct raw_throughput_cnt {
+	void *throughput_read_write_lock;
 	unsigned long raw_bytes_sent;
 	unsigned int num_of_packets;
 };
@@ -491,7 +492,7 @@ struct nrf_wifi_fmac_dev_ctx_def {
 	struct raw_tx_pkt_header raw_tx_config;
 	struct raw_tx_stats raw_pkt_stats;
 #endif /* NRF70_RAW_DATA_TX */
-	struct raw_throughput_cnt throughput;
+	struct raw_throughput_cnt raw_throughput;
 };
 
 /**

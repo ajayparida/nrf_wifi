@@ -3102,3 +3102,20 @@ out:
 	return status;
 }
 #endif /*NRF_WIFI_RX_BUFF_PROG_UMAC */
+
+enum nrf_wifi_status nrf_wifi_fmac_get_throughput_bytes(void *dev_ctx,
+							unsigned int *throughput_bytes)
+{
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_SUCCESS;
+	struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx = NULL;
+	struct nrf_wifi_fmac_dev_ctx_def *def_dev_ctx = NULL;
+
+	fmac_dev_ctx = dev_ctx;
+	def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
+
+	nrf_wifi_osal_spinlock_take(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+	*throughput_bytes = def_dev_ctx->raw_throughput.raw_bytes_sent;
+	nrf_wifi_osal_spinlock_rel(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+
+	return status;
+}

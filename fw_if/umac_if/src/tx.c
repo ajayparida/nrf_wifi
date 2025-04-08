@@ -595,6 +595,8 @@ enum nrf_wifi_status rawtx_cmd_prep_callbk_fn(void *callbk_data,
 	tx_buf_info->mapped = true;
 	config->raw_tx_info.frame_ddr_pointer = (unsigned long long)phy_addr;
 #else
+	tx_buf_info->nwb = nwb;
+	tx_buf_info->mapped = true;
 	nrf_wifi_osal_log_info("%s: frame pointer for data is 0x%x", __func__, nwb_data);
         config->raw_tx_info.frame_ddr_pointer =  (unsigned long long)nwb_data;
 #endif /* !CONFIG_NRF71_ON_IPC */
@@ -726,6 +728,8 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 	def_dev_ctx->tx_config.send_pkt_coalesce_count_p[desc] = txq_len;
 	config = (struct nrf_wifi_cmd_raw_tx *)(umac_cmd->msg);
 	len = nrf_wifi_osal_nbuf_data_size(nwb);
+	nrf_wifi_osal_log_info("%s: length of the packet is %d", __func__, desc);
+	nrf_wifi_osal_log_info("%s: nwb is 0x%X", __func__, nwb);
 
 	config->sys_head.cmd_event = NRF_WIFI_CMD_RAW_TX_PKT;
 	config->sys_head.len = sizeof(*config);
@@ -1275,6 +1279,20 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		 */
 		tx_buf_info->nwb = 0;
 		tx_buf_info->mapped = false;
+#else
+		/**
+		 * For Throughput measurement
+		 * get the packet size here from network buffer
+		 * and check what is the packet size
+		 * being sent out in the last sent packet
+		 **/
+		nrf_wifi_osal_spinlock_take(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+		def_dev_ctx->raw_throughput.raw_bytes_sent += nrf_wifi_osal_nbuf_data_size((void *)(tx_buf_info->nwb));
+		nrf_wifi_osal_spinlock_rel(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+		tx_buf_info->nwb = 0;
+		tx_buf_info->mapped = false;
+		nrf_wifi_osal_log_info("%s: tx done event nwb length is %d", __func__, def_dev_ctx->raw_throughput.raw_bytes_sent);
+
 #endif /* !CONFIG_NRF71_ON_IPC */
 	}
 
@@ -1287,18 +1305,11 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 			continue;
 		}
 
-		/**
-		 * For Throughput measurement - vivek
-		 * get the packet size here from network buffer
-		 * and check what is the packet size
-		 * being sent out in the last sent packet
-		 */
-/*		nrf_wifi_osal_log_err("%s: data size of tx done packet is %d", nrf_wifi_osal_nbuf_data_size(nwb));*/
-		def_dev_ctx->throughput.raw_bytes_sent = nrf_wifi_osal_nbuf_data_size(nwb);
 		nrf_wifi_osal_nbuf_free(nwb);
 		pkt++;
 	}
 
+	def_dev_ctx->raw_throughput.num_of_packets += pkt;
 	def_dev_ctx->host_stats.total_tx_done_pkts += pkt;
 
 	pkts_pending = tx_buff_req_free(fmac_dev_ctx, tx_desc_num, &queue);
@@ -1643,6 +1654,14 @@ enum nrf_wifi_status tx_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx)
 	}
 
 	def_dev_ctx->twt_sleep_status = NRF_WIFI_FMAC_TWT_STATE_AWAKE;
+
+	def_dev_ctx->raw_throughput.throughput_read_write_lock = nrf_wifi_osal_spinlock_alloc();
+	if (!def_dev_ctx->raw_throughput.throughput_read_write_lock) {
+		nrf_wifi_osal_log_err("%s: Unable to allocate throughput lock",
+				      __func__);
+		goto out;
+	}
+	nrf_wifi_osal_spinlock_init(def_dev_ctx->raw_throughput.throughput_read_write_lock);
 
 #ifdef NRF70_TX_DONE_WQ_ENABLED
 	def_dev_ctx->tx_done_tasklet = nrf_wifi_osal_tasklet_alloc(NRF_WIFI_TASKLET_TYPE_TX_DONE);
