@@ -1,3 +1,8 @@
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_DECLARE(wifi_nrf_bus, CONFIG_WIFI_NRF70_BUSLIB_LOG_LEVEL);
+
 #ifdef __MEOS__
 	#include "meos/ipc_service/wifi_ipc_service.h"
 	#include "MEOS.h"
@@ -100,7 +105,7 @@ static WIFI_IPC_STATUS_T wifi_ipc_busyq_register(WIFI_IPC_T *p_context)
 		return WIFI_IPC_STATUS_INIT_ERR;
 	}
 
-	printf("ok\n");
+	LOG_INF("IPC service registered: %s", p_context->busy_q.ipc_ep_cfg.name);
 	return WIFI_IPC_STATUS_OK;
 }
 
