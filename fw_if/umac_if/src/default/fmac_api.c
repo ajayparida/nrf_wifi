@@ -431,6 +431,7 @@ enum nrf_wifi_status nrf_wifi_fmac_dev_init(struct nrf_wifi_fmac_dev_ctx *fmac_d
 				      __func__);
 		goto out;
 	}
+#endif /* !CONFIG_NRF71_ON_IPC */
 
 	status = nrf_wifi_fmac_rf_params_get(fmac_dev_ctx,
 					     &phy_rf_params);
@@ -439,7 +440,6 @@ enum nrf_wifi_status nrf_wifi_fmac_dev_init(struct nrf_wifi_fmac_dev_ctx *fmac_d
 				      __func__);
 		goto out;
 	}
-#endif /* !CONFIG_NRF71_ON_IPC */
 
 	status = nrf_wifi_fmac_fw_init(fmac_dev_ctx,
 				       &phy_rf_params,

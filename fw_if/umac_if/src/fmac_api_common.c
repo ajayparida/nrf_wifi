@@ -611,6 +611,7 @@ enum nrf_wifi_status nrf_wifi_fmac_rf_params_get(
 			      0xFF,
 			      sizeof(otp_info));
 
+#ifndef CONFIG_NRF71_ON_IPC
 	status = nrf_wifi_hal_otp_info_get(fmac_dev_ctx->hal_dev_ctx,
 					   &otp_info.info,
 					   &otp_info.flags);
@@ -637,6 +638,7 @@ enum nrf_wifi_status nrf_wifi_fmac_rf_params_get(
 		goto out;
 	}
 
+#endif /* !CONFIG_NRF71_ON_IPC */
 	ret = nrf_wifi_phy_rf_params_init(phy_rf_params,
 				    	  package_info,
 				    	  NRF_WIFI_DEF_RF_PARAMS);

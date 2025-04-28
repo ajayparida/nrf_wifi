@@ -224,6 +224,8 @@ enum rpu_ch_bw {
  *
  */
 struct chan_params {
+	/** Operating band see enum op_band */
+	unsigned int op_band;
 	/** Primary channel number */
 	unsigned int primary_num;
 	/** Channel bandwidth */
