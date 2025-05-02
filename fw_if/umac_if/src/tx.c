@@ -728,8 +728,6 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 	def_dev_ctx->tx_config.send_pkt_coalesce_count_p[desc] = txq_len;
 	config = (struct nrf_wifi_cmd_raw_tx *)(umac_cmd->msg);
 	len = nrf_wifi_osal_nbuf_data_size(nwb);
-	nrf_wifi_osal_log_info("%s: length of the packet is %d", __func__, desc);
-	nrf_wifi_osal_log_info("%s: nwb is 0x%X", __func__, nwb);
 
 	config->sys_head.cmd_event = NRF_WIFI_CMD_RAW_TX_PKT;
 	config->sys_head.len = sizeof(*config);
