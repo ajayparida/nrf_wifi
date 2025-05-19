@@ -1036,7 +1036,7 @@ static enum nrf_wifi_status umac_process_sys_events(struct nrf_wifi_fmac_dev_ctx
 #endif
 #ifdef NRF70_RAW_DATA_TX
 	case NRF_WIFI_EVENT_RAW_TX_DONE:
-		nrf_wifi_osal_log_info("%s: RAW TX Done Event Received", __func__);
+		nrf_wifi_osal_log_dbg("%s: RAW TX Done Event Received", __func__);
 		status = nrf_wifi_fmac_rawtx_done_event_process(fmac_dev_ctx,
 						(struct nrf_wifi_event_raw_tx_done *)sys_head);
 		break;
