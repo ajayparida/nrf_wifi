@@ -746,6 +746,10 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 	config->raw_tx_info.rate = def_dev_ctx->raw_tx_config.data_rate;
 	config->raw_tx_info.rate_flags = def_dev_ctx->raw_tx_config.tx_mode;
 
+	nrf_wifi_osal_log_dbg("%s: rate is %d, rate flags is %d",
+			       __func__,
+			       config->raw_tx_info.rate,
+			       config->raw_tx_info.rate_flags);
 	info.fmac_dev_ctx = fmac_dev_ctx;
 	info.raw_config = config;
 	info.num_tx_pkts = 0;
