@@ -544,7 +544,9 @@ enum nrf_wifi_status rawtx_cmd_prep_callbk_fn(void *callbk_data,
 	struct nrf_wifi_fmac_buf_map_info *tx_buf_info = NULL;
 	unsigned long nwb = 0;
 	unsigned long nwb_data = 0;
+#ifndef CONFIG_NRF71_ON_IPC
 	unsigned long phy_addr = 0;
+#endif /* !CONFIG_NRF71_ON_IPC */
 	struct tx_cmd_prep_raw_info *info = NULL;
 	struct nrf_wifi_cmd_raw_tx *config = NULL;
 	unsigned int desc_id = 0;
