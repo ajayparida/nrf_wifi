@@ -1091,42 +1091,43 @@ enum nrf_wifi_fmac_tx_status tx_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_c
 	}
 
 	pend_pkt_q = def_dev_ctx->tx_config.data_pending_txq[peer_id][ac];
+#ifdef NRF70_RAW_DATA_TX
+	if (!def_dev_ctx->raw_tx_config.raw_tx_flag) {
+#endif
+		/* If outstanding_descs for a particular
+		* access category >= NUM_TX_DESCS_PER_AC means there are already
+		* pending packets for that access category. So now see if frames
+		* can be aggregated depending upon access category depending
+		* upon SA, RA & AC
+		*/
 
-	/* If outstanding_descs for a particular
-	 * access category >= NUM_TX_DESCS_PER_AC means there are already
-	 * pending packets for that access category. So now see if frames
-	 * can be aggregated depending upon access category depending
-	 * upon SA, RA & AC
-	 */
+		if ((def_dev_ctx->tx_config.outstanding_descs[ac]) >= def_priv->num_tx_tokens_per_ac) {
+			if (nrf_wifi_utils_q_len(pend_pkt_q)) {
+				first_nwb = nrf_wifi_utils_q_peek(pend_pkt_q);
 
-	if ((def_dev_ctx->tx_config.outstanding_descs[ac]) >= def_priv->num_tx_tokens_per_ac) {
-		if (nrf_wifi_utils_q_len(pend_pkt_q)) {
-			first_nwb = nrf_wifi_utils_q_peek(pend_pkt_q);
+				aggr_status = true;
 
-			aggr_status = true;
+				if (!nrf_wifi_util_ether_addr_equal(nrf_wifi_util_get_dest(fmac_dev_ctx,
+											nbuf),
+									nrf_wifi_util_get_dest(fmac_dev_ctx,
+											first_nwb))) {
+					aggr_status = false;
+				}
 
-			if (!nrf_wifi_util_ether_addr_equal(nrf_wifi_util_get_dest(fmac_dev_ctx,
-										   nbuf),
-							    nrf_wifi_util_get_dest(fmac_dev_ctx,
-										   first_nwb))) {
-				aggr_status = false;
+				if (!nrf_wifi_util_ether_addr_equal(nrf_wifi_util_get_src(fmac_dev_ctx,
+											nbuf),
+									nrf_wifi_util_get_src(fmac_dev_ctx,
+											first_nwb))) {
+					aggr_status = false;
+				}
 			}
 
-			if (!nrf_wifi_util_ether_addr_equal(nrf_wifi_util_get_src(fmac_dev_ctx,
-										  nbuf),
-							    nrf_wifi_util_get_src(fmac_dev_ctx,
-										  first_nwb))) {
-				aggr_status = false;
-			}
-		}
+			if (aggr_status) {
+				max_cmds = def_priv->data_config.max_tx_aggregation;
 
-		if (aggr_status) {
-		nrf_wifi_osal_log_err("%s: aggregation status is true", __func__);
-			
-			max_cmds = def_priv->data_config.max_tx_aggregation;
-
-			if (nrf_wifi_utils_q_len(pend_pkt_q) < max_cmds) {
-				goto out;
+				if (nrf_wifi_utils_q_len(pend_pkt_q) < max_cmds) {
+					goto out;
+				}
 			}
 		}
 	}
