@@ -1134,7 +1134,9 @@ enum nrf_wifi_fmac_tx_status tx_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_c
 				}
 			}
 		}
+#ifdef NRF70_RAW_DATA_TX
 	}
+#endif /* NRF70_RAW_DATA_TX */
 	return NRF_WIFI_FMAC_TX_STATUS_SUCCESS;
 out:
 	nrf_wifi_osal_log_err("%s: packet is getting queued", __func__);
