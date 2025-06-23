@@ -599,7 +599,7 @@ enum nrf_wifi_status rawtx_cmd_prep_callbk_fn(void *callbk_data,
 #else
 	tx_buf_info->nwb = nwb;
 	tx_buf_info->mapped = true;
-	nrf_wifi_osal_log_info("%s: frame pointer for data is 0x%x", __func__, nwb_data);
+	nrf_wifi_osal_log_dbg("%s: frame pointer for data is 0x%x", __func__, nwb_data);
         config->raw_tx_info.frame_ddr_pointer =  (unsigned long long)nwb_data;
 #endif /* !CONFIG_NRF71_ON_IPC */
 	info->num_tx_pkts++;
@@ -730,21 +730,23 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 	def_dev_ctx->tx_config.send_pkt_coalesce_count_p[desc] = txq_len;
 	config = (struct nrf_wifi_cmd_raw_tx *)(umac_cmd->msg);
 	len = nrf_wifi_osal_nbuf_data_size(nwb);
-	nrf_wifi_osal_log_info("%s: length of the packet is %d", __func__, desc);
-	nrf_wifi_osal_log_info("%s: nwb is 0x%X", __func__, nwb);
+	nrf_wifi_osal_log_dbg("%s: length of the packet is %d", __func__, desc);
+	nrf_wifi_osal_log_dbg("%s: nwb is 0x%X", __func__, nwb);
 
 	config->sys_head.cmd_event = NRF_WIFI_CMD_RAW_TX_PKT;
 	config->sys_head.len = sizeof(*config);
 	config->if_index = vif_id;
 	config->raw_tx_info.desc_num = desc;
-	nrf_wifi_osal_log_info("%s: desc number at raw tx is %d", __func__, desc);
+	nrf_wifi_osal_log_dbg("%s: desc number at raw tx is %d", __func__, desc);
 	config->raw_tx_info.queue_num = def_dev_ctx->raw_tx_config.queue;
-
+	if (len != def_dev_ctx->raw_tx_config.packet_length) {
+		goto err;
+	}
 	config->raw_tx_info.pkt_length = len;
 	config->raw_tx_info.rate = def_dev_ctx->raw_tx_config.data_rate;
 	config->raw_tx_info.rate_flags = def_dev_ctx->raw_tx_config.tx_mode;
 
-	nrf_wifi_osal_log_info("%s: rate is %d, rate flags is %d",
+	nrf_wifi_osal_log_dbg("%s: rate is %d, rate flags is %d",
 			       __func__,
 			       config->raw_tx_info.rate,
 			       config->raw_tx_info.rate_flags);
@@ -919,7 +921,7 @@ enum nrf_wifi_status rawtx_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 					    umac_cmd,
 					    (sizeof(*umac_cmd) + len));
 
-	nrf_wifi_osal_log_info("%s: nrf_wifi_hal_ctrl_cmd_send : status = %d", __func__, status);
+	nrf_wifi_osal_log_dbg("%s: nrf_wifi_hal_ctrl_cmd_send : status = %d", __func__, status);
 	/* clear the raw tx config data */
 	nrf_wifi_osal_mem_set(&def_dev_ctx->raw_tx_config,
 			      0, sizeof(struct raw_tx_pkt_header));
@@ -1246,7 +1248,7 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	def_priv = wifi_fmac_priv(fmac_dev_ctx->fpriv);
 
 	desc = tx_desc_num;
-	nrf_wifi_osal_log_info("%s: tx desc num is %d", __func__, desc);
+	nrf_wifi_osal_log_dbg("%s: tx desc num is %d", __func__, desc);
 
 	if (desc > def_priv->num_tx_tokens) {
 		nrf_wifi_osal_log_err("Invalid desc");
@@ -1298,7 +1300,7 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		nrf_wifi_osal_spinlock_rel(def_dev_ctx->raw_throughput.throughput_read_write_lock);
 		tx_buf_info->nwb = 0;
 		tx_buf_info->mapped = false;
-		nrf_wifi_osal_log_info("%s: tx done event nwb length is %d", __func__, def_dev_ctx->raw_throughput.raw_bytes_sent);
+		nrf_wifi_osal_log_dbg("%s: tx done event nwb length is %d", __func__, def_dev_ctx->raw_throughput.raw_bytes_sent);
 
 #endif /* !CONFIG_NRF71_ON_IPC */
 	}
@@ -1852,7 +1854,7 @@ enum nrf_wifi_status nrf_wifi_fmac_start_rawpkt_xmit(void *dev_ctx,
 				     ac,
 				     peer_id);
 	if (tx_status == NRF_WIFI_FMAC_TX_STATUS_FAIL) {
-		nrf_wifi_osal_log_info("%s: Failed to send packet\n",
+		nrf_wifi_osal_log_dbg("%s: Failed to send packet\n",
 				      __func__);
 		/** Increment failure count */
 		def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure += 1;
@@ -1927,7 +1929,7 @@ enum nrf_wifi_status nrf_wifi_fmac_start_xmit(void *dev_ctx,
 				  peer_id);
 
 	if (tx_status == NRF_WIFI_FMAC_TX_STATUS_FAIL) {
-		nrf_wifi_osal_log_info("%s: Failed to send packet",
+		nrf_wifi_osal_log_dbg("%s: Failed to send packet",
 				      __func__);
 		goto out;
 	}
