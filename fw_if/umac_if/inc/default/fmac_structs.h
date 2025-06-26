@@ -427,8 +427,6 @@ struct raw_tx_pkt_header {
 	unsigned char tx_mode;
 	/** Wi-Fi access category mapping for packet @ref nrf_wifi_fmac_ac. */
 	unsigned char queue;
-	/** Flag indicating raw packet transmission. */
-	unsigned char raw_tx_flag;
 };
 
 /**
@@ -442,6 +440,7 @@ struct raw_tx_stats {
 	unsigned int raw_pkts_sent;
 	/** Count of successful raw packets sent. */
 	unsigned int raw_pkt_send_failure;
+	unsigned int raw_pkt_txd_failure;
 	/** Count of un-successful raw packets sent. */
 	unsigned int raw_pkt_send_success;
 	unsigned int raw_pkt_fail_dbg_1;

@@ -3132,10 +3132,11 @@ enum nrf_wifi_status nrf_wifi_fmac_get_throughput_bytes(void *dev_ctx,
 					  def_dev_ctx->host_stats.total_tx_pkts,
 					  def_dev_ctx->host_stats.total_tx_done_pkts,
 					  def_dev_ctx->host_stats.total_tx_drop_pkts);
-	nrf_wifi_osal_log_info("raw_pkt_stats: total: %u, failure: %u, success: %u",
+	nrf_wifi_osal_log_info("raw_pkt_stats: total: %u, failure: %u, success: %u, txdfail: %u",
 					  def_dev_ctx->raw_pkt_stats.raw_pkts_sent,
 					  def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure,
-					  def_dev_ctx->raw_pkt_stats.raw_pkt_send_success);
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_send_success,
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_txd_failure);
 	nrf_wifi_osal_log_info("raw_pkt_stats: dbg_1: %u, dbg_2: %u, dbg_3: %u",
 					  def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_1,
 					  def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_2,
