@@ -62,6 +62,7 @@ struct tx_pkt_info {
 	void *pkt;
 	/** Peer ID. */
 	unsigned int peer_id;
+	volatile unsigned long tx_timestamp;
 };
 
 #ifdef NRF70_RAW_DATA_TX

@@ -444,13 +444,21 @@ struct raw_tx_stats {
 	unsigned int raw_pkt_send_failure;
 	/** Count of un-successful raw packets sent. */
 	unsigned int raw_pkt_send_success;
+	unsigned int raw_pkt_fail_dbg_1;
+	unsigned int raw_pkt_fail_dbg_2;
+	unsigned int raw_pkt_fail_dbg_3;
 };
 #endif /* NRF70_RAW_DATA_TX */
-
+#define MAX_ENTRIES 100
 struct raw_throughput_cnt {
-	void *throughput_read_write_lock;
+	unsigned long raw_bytes_tx_sent;
+	unsigned long raw_bytes_tx_dropped;
 	unsigned long raw_bytes_sent;
 	unsigned int num_of_packets;
+	unsigned long first_tx_timestamp;
+	unsigned long last_tx_done_timestamp;
+	unsigned long tx_index;
+	unsigned long last_tx_done_umac_timestamp[MAX_ENTRIES];
 };
 
 /**
@@ -493,6 +501,7 @@ struct nrf_wifi_fmac_dev_ctx_def {
 	struct raw_tx_stats raw_pkt_stats;
 #endif /* NRF70_RAW_DATA_TX */
 	struct raw_throughput_cnt raw_throughput;
+	void *throughput_read_write_lock;
 };
 
 /**
