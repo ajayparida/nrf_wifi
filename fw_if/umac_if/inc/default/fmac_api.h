@@ -28,7 +28,8 @@
 #include "fmac_bb.h"
 #include "fmac_api_common.h"
 
-
+extern bool tx_sent_complete, tx_complete;
+extern unsigned int tx_sent_dbg_1, tx_sent_dbg_2,tx_sent_dbg_3, tx_sent;
 
 /**
  * @brief Initialize the UMAC IF layer.

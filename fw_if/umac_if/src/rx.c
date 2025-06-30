@@ -110,6 +110,8 @@ enum nrf_wifi_status nrf_wifi_fmac_rx_cmd_send(struct nrf_wifi_fmac_dev_ctx *fma
 #endif /* CONFIG_NRF71_ON_IPC */
 	unsigned int buf_len = 0;
 
+	//return NRF_WIFI_STATUS_SUCCESS;
+
 	def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
 	def_priv = wifi_fmac_priv(fmac_dev_ctx->fpriv);
 

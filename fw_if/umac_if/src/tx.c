@@ -19,6 +19,10 @@
 #include "hal_mem.h"
 #include "fmac_util.h"
 
+bool tx_sent_complete, tx_complete;
+unsigned int txd_cnt = 0, txd_indx = 0, tx_sent = 0;
+
+
 static bool is_twt_emergency_pkt(void *nwb)
 {
 	unsigned char priority = nrf_wifi_osal_nbuf_get_priority(nwb);
@@ -302,6 +306,8 @@ int tx_aggr_check(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	bool aggr = true;
 	struct nrf_wifi_fmac_dev_ctx_def *def_dev_ctx = NULL;
 
+	return false;
+
 	def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
 
 	if (def_dev_ctx->tx_config.peers[peer].is_legacy) {
@@ -401,6 +407,7 @@ int tx_curr_peer_opp_get(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	}
 
 #ifdef NRF70_RAW_DATA_TX
+	return MAX_PEERS;
 	if (def_dev_ctx->raw_tx_config.raw_tx_flag) {
 		return MAX_PEERS;
 	}
@@ -525,6 +532,8 @@ size_t _tx_pending_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	}
 
 	len = nrf_wifi_utils_q_len(txq);
+	nrf_wifi_osal_log_dbg("%s: desc %d, ac %d, peer_id %d, len %d, rem %d",
+				      __func__, desc, ac, peer_id, len, nrf_wifi_utils_q_len(pend_pkt_q));
 
 	if (len > 0) {
 		def_dev_ctx->tx_config.pkt_info_p[desc].peer_id = peer_id;
@@ -603,6 +612,8 @@ enum nrf_wifi_status rawtx_cmd_prep_callbk_fn(void *callbk_data,
         config->raw_tx_info.frame_ddr_pointer =  (unsigned long long)nwb_data;
 #endif /* !CONFIG_NRF71_ON_IPC */
 	info->num_tx_pkts++;
+
+	def_dev_ctx->raw_throughput.raw_bytes_tx_sent += buf_len;
 
 	status = NRF_WIFI_STATUS_SUCCESS;
 out:
@@ -739,9 +750,7 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 	config->raw_tx_info.desc_num = desc;
 	nrf_wifi_osal_log_dbg("%s: desc number at raw tx is %d", __func__, desc);
 	config->raw_tx_info.queue_num = def_dev_ctx->raw_tx_config.queue;
-	if (len != def_dev_ctx->raw_tx_config.packet_length) {
-		goto err;
-	}
+
 	config->raw_tx_info.pkt_length = len;
 	config->raw_tx_info.rate = def_dev_ctx->raw_tx_config.data_rate;
 	config->raw_tx_info.rate_flags = def_dev_ctx->raw_tx_config.tx_mode;
@@ -762,7 +771,7 @@ enum nrf_wifi_status rawtx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ct
 				      __func__);
 		goto err;
 	}
-	def_dev_ctx->host_stats.total_tx_pkts += info.num_tx_pkts;
+	def_dev_ctx->host_stats.total_tx_pkts +=1;
 
 	return NRF_WIFI_STATUS_SUCCESS;
 err:
@@ -860,7 +869,7 @@ enum nrf_wifi_status tx_cmd_prepare(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		goto err;
 	}
 
-	def_dev_ctx->host_stats.total_tx_pkts += config->num_tx_pkts;
+	//def_dev_ctx->host_stats.total_tx_pkts += config->num_tx_pkts;
 	config->wdev_id = def_dev_ctx->tx_config.peers[peer_id].if_idx;
 
 	if ((vif_ctx->if_type == NRF_WIFI_IFTYPE_AP ||
@@ -920,8 +929,15 @@ enum nrf_wifi_status rawtx_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	status = nrf_wifi_hal_ctrl_cmd_send(fmac_dev_ctx->hal_dev_ctx,
 					    umac_cmd,
 					    (sizeof(*umac_cmd) + len));
+	def_dev_ctx->tx_config.pkt_info_p[desc].tx_timestamp = nrf_wifi_osal_time_get_curr_us();
+	def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_2 += 1;
+	def_dev_ctx->raw_pkt_stats.raw_pkts_sent_per_desc[(desc / NRF_WIFI_FMAC_AC_MAX) + 
+		((desc % NRF_WIFI_FMAC_AC_MAX))] += 1;
 
-	nrf_wifi_osal_log_dbg("%s: nrf_wifi_hal_ctrl_cmd_send : status = %d", __func__, status);
+	nrf_wifi_osal_log_dbg("%s: nrf_wifi_hal_ctrl_cmd_send : status = %d, ts: %lu",
+			      __func__,
+			      status,
+			      def_dev_ctx->tx_config.pkt_info_p[desc].tx_timestamp);
 	/* clear the raw tx config data */
 	nrf_wifi_osal_mem_set(&def_dev_ctx->raw_tx_config,
 			      0, sizeof(struct raw_tx_pkt_header));
@@ -1041,6 +1057,9 @@ enum nrf_wifi_status tx_enqueue(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	qlen = nrf_wifi_utils_q_len(queue);
 
 	if (qlen >= NRF70_MAX_TX_PENDING_QLEN) {
+		def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_1 += 1;
+		def_dev_ctx->raw_throughput.raw_bytes_tx_dropped +=
+			nrf_wifi_osal_nbuf_data_size((void *)nwb);
 		goto out;
 	}
 
@@ -1248,7 +1267,7 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	def_priv = wifi_fmac_priv(fmac_dev_ctx->fpriv);
 
 	desc = tx_desc_num;
-	nrf_wifi_osal_log_dbg("%s: tx desc num is %d", __func__, desc);
+	
 
 	if (desc > def_priv->num_tx_tokens) {
 		nrf_wifi_osal_log_err("Invalid desc");
@@ -1257,6 +1276,22 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 
 	pkt_info = &def_dev_ctx->tx_config.pkt_info_p[desc];
 	nwb_list = pkt_info->pkt;
+
+	def_dev_ctx->raw_throughput.last_tx_done_umac_timestamp[txd_indx++ % MAX_ENTRIES] = 
+		nrf_wifi_osal_time_get_curr_us() - pkt_info->tx_timestamp;
+	nrf_wifi_osal_log_dbg("tx desc num is %d, coal: %d curt: %lu, ts: %lu, tdiff: %lu",
+			       desc,
+				   def_dev_ctx->tx_config.send_pkt_coalesce_count_p[desc],
+				   nrf_wifi_osal_time_get_curr_us(),
+				   pkt_info->tx_timestamp,
+				   nrf_wifi_osal_time_get_curr_us() - pkt_info->tx_timestamp);
+			    
+		txd_cnt += def_dev_ctx->tx_config.send_pkt_coalesce_count_p[desc];
+		if (tx_sent_complete && ((txd_cnt + def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure) >= tx_sent)) {
+			tx_complete = true;
+			txd_cnt = 0;
+			txd_indx = 0;
+		}
 
 	for (frame = 0;
 	     frame < def_dev_ctx->tx_config.send_pkt_coalesce_count_p[desc];
@@ -1295,12 +1330,16 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		 * and check what is the packet size
 		 * being sent out in the last sent packet
 		 **/
-		nrf_wifi_osal_spinlock_take(def_dev_ctx->raw_throughput.throughput_read_write_lock);
-		def_dev_ctx->raw_throughput.raw_bytes_sent += nrf_wifi_osal_nbuf_data_size((void *)(tx_buf_info->nwb));
-		nrf_wifi_osal_spinlock_rel(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+		nrf_wifi_osal_spinlock_take(def_dev_ctx->throughput_read_write_lock);
+		/* Only update raw throughput if this is a raw packet */
+		if (def_dev_ctx->raw_tx_config.raw_tx_flag) {
+			def_dev_ctx->raw_throughput.raw_bytes_sent += nrf_wifi_osal_nbuf_data_size((void *)(tx_buf_info->nwb));
+			def_dev_ctx->raw_throughput.last_tx_done_timestamp = nrf_wifi_osal_time_get_curr_ms();
+		}
+		nrf_wifi_osal_spinlock_rel(def_dev_ctx->throughput_read_write_lock);
 		tx_buf_info->nwb = 0;
 		tx_buf_info->mapped = false;
-		nrf_wifi_osal_log_dbg("%s: tx done event nwb length is %d", __func__, def_dev_ctx->raw_throughput.raw_bytes_sent);
+		nrf_wifi_osal_log_dbg("%s: tx done event nwb length is %d, ", __func__, def_dev_ctx->raw_throughput.raw_bytes_sent);
 
 #endif /* !CONFIG_NRF71_ON_IPC */
 	}
@@ -1339,7 +1378,7 @@ enum nrf_wifi_status tx_done_process(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 		nwb = nrf_wifi_utils_list_peek(txq);
 		data = nrf_wifi_osal_nbuf_data_get(nwb);
 
-		if (*(unsigned int *)data != NRF_WIFI_MAGIC_NUM_RAWTX) {
+		if (0) {
 #endif /* NRF70_RAW_DATA_TX */
 			if (def_dev_ctx->twt_sleep_status ==
 			    NRF_WIFI_FMAC_TWT_STATE_AWAKE) {
@@ -1440,15 +1479,17 @@ enum nrf_wifi_status nrf_wifi_fmac_rawtx_done_event_process(
 	}
 
 	nrf_wifi_osal_spinlock_take(def_dev_ctx->tx_config.tx_lock);
-
+	def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_3 += 1;
 	if (config->status == NRF_WIFI_STATUS_FAIL) {
 		/**
 		 * If the status indicates failure,
 		 * increment raw TX failure count. The TX buffers
 		 * still need to be freed. */
-		def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure += 1;
+		//def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure += 1;
+		nrf_wifi_osal_log_err("%s: Raw TX failed",
+				      __func__);
 	}
-
+	def_dev_ctx->raw_tx_config.raw_tx_flag = 1;
 	status = tx_done_process(fmac_dev_ctx,
 				 config->desc_num);
 
@@ -1664,13 +1705,13 @@ enum nrf_wifi_status tx_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx)
 
 	def_dev_ctx->twt_sleep_status = NRF_WIFI_FMAC_TWT_STATE_AWAKE;
 
-	def_dev_ctx->raw_throughput.throughput_read_write_lock = nrf_wifi_osal_spinlock_alloc();
-	if (!def_dev_ctx->raw_throughput.throughput_read_write_lock) {
+	def_dev_ctx->throughput_read_write_lock = nrf_wifi_osal_spinlock_alloc();
+	if (!def_dev_ctx->throughput_read_write_lock) {
 		nrf_wifi_osal_log_err("%s: Unable to allocate throughput lock",
 				      __func__);
 		goto out;
 	}
-	nrf_wifi_osal_spinlock_init(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+	nrf_wifi_osal_spinlock_init(def_dev_ctx->throughput_read_write_lock);
 
 #ifdef NRF70_TX_DONE_WQ_ENABLED
 	def_dev_ctx->tx_done_tasklet = nrf_wifi_osal_tasklet_alloc(NRF_WIFI_TASKLET_TYPE_TX_DONE);
@@ -1829,6 +1870,16 @@ enum nrf_wifi_status nrf_wifi_fmac_start_rawpkt_xmit(void *dev_ctx,
 	fmac_dev_ctx = (struct nrf_wifi_fmac_dev_ctx *)dev_ctx;
 	def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
 
+	if (def_dev_ctx->raw_throughput.first_tx_timestamp == 0) {
+		/**
+		 * This is the first RAW packet being sent.
+		 * Initialize the last_tx_done_timestamp
+		 * to current time.
+		 */
+		def_dev_ctx->raw_throughput.first_tx_timestamp =
+			nrf_wifi_osal_time_get_curr_ms();
+	}
+
 	/**
 	 * only allow raw packet to be transmitted if interface type allows it
 	 * do not queue the packet if interface type does not allow raw tx
@@ -1847,17 +1898,18 @@ enum nrf_wifi_status nrf_wifi_fmac_start_rawpkt_xmit(void *dev_ctx,
 	def_dev_ctx->raw_tx_config.raw_tx_flag = 1;
 	peer_id = MAX_PEERS;
 	ac = def_dev_ctx->raw_tx_config.queue;
-
+	def_dev_ctx->raw_pkt_stats.raw_pkts_sent += 1;
 	tx_status = nrf_wifi_fmac_tx(fmac_dev_ctx,
 				     if_idx,
 				     nwb,
 				     ac,
 				     peer_id);
 	if (tx_status == NRF_WIFI_FMAC_TX_STATUS_FAIL) {
-		nrf_wifi_osal_log_dbg("%s: Failed to send packet\n",
-				      __func__);
+		nrf_wifi_osal_log_dbg("TXF %d\n",
+					  def_dev_ctx->raw_pkt_stats.raw_pkts_sent);
 		/** Increment failure count */
 		def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure += 1;
+		goto fail;
 	} else {
 		/**
 		 * Increment success count.
@@ -1871,9 +1923,11 @@ enum nrf_wifi_status nrf_wifi_fmac_start_rawpkt_xmit(void *dev_ctx,
 	 * The network stack might think interface is down
 	 */
 out:
-	def_dev_ctx->raw_pkt_stats.raw_pkts_sent += 1;
 	return NRF_WIFI_STATUS_SUCCESS;
 fail:
+	if (nwb) {
+		nrf_wifi_osal_nbuf_free(nwb);
+	}
 	return NRF_WIFI_STATUS_FAIL;
 }
 #endif /* NRF70_RAW_DATA_TX */

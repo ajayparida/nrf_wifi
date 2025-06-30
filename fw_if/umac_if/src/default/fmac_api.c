@@ -298,6 +298,10 @@ static enum nrf_wifi_status nrf_wifi_fmac_fw_init(struct nrf_wifi_fmac_dev_ctx *
 		buf_addr = (unsigned int) nrf_wifi_fmac_get_rx_buf_map_addr(fmac_dev_ctx, desc_id);
 		if (buf_addr) {
 			rx_buf_info_iter->skb_pointer = buf_addr;
+			nrf_wifi_osal_log_dbg("%s: RX buffer mapped for desc_id = %d, buf_addr = %p",
+					      __func__,
+					      desc_id,
+					      (void *)buf_addr);
 			rx_buf_info_iter->skb_desc_no = desc_id;
 			rx_buf_info_iter++;
 		} else {
@@ -3111,11 +3115,75 @@ enum nrf_wifi_status nrf_wifi_fmac_get_throughput_bytes(void *dev_ctx,
 	struct nrf_wifi_fmac_dev_ctx_def *def_dev_ctx = NULL;
 
 	fmac_dev_ctx = dev_ctx;
+	if (!fmac_dev_ctx) {
+		nrf_wifi_osal_log_err("%s: fmac_dev_ctx is NULL\n", __func__);
+		return NRF_WIFI_STATUS_FAIL;
+	}
 	def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
+	if (!def_dev_ctx) {
+		nrf_wifi_osal_log_err("%s: def_dev_ctx is NULL\n", __func__);
+		return NRF_WIFI_STATUS_FAIL;
+	}
 
-	nrf_wifi_osal_spinlock_take(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+	nrf_wifi_osal_spinlock_take(def_dev_ctx->throughput_read_write_lock);
 	*throughput_bytes = def_dev_ctx->raw_throughput.raw_bytes_sent;
-	nrf_wifi_osal_spinlock_rel(def_dev_ctx->raw_throughput.throughput_read_write_lock);
+	nrf_wifi_osal_log_info("tx_doneb: %u, first_ts: %u, last_ts: %u, dropped: %u, tput: %f Mbps",
+					  def_dev_ctx->raw_throughput.raw_bytes_sent,
+					  def_dev_ctx->raw_throughput.first_tx_timestamp,
+					  def_dev_ctx->raw_throughput.last_tx_done_timestamp,
+					  def_dev_ctx->raw_throughput.raw_bytes_tx_dropped,
+					  (def_dev_ctx->raw_throughput.raw_bytes_sent * 8) /
+					  (def_dev_ctx->raw_throughput.last_tx_done_timestamp -
+					  def_dev_ctx->raw_throughput.first_tx_timestamp) / 1024.0);
+	nrf_wifi_osal_log_info("tx dbg: 1: %d, 2 : %d, 3: %d\n", 
+		tx_sent_dbg_1, tx_sent_dbg_2, tx_sent_dbg_3);
+	nrf_wifi_osal_log_info("host_stats: tx: %u, tx_done: %u, tx_drop: %u",
+					  def_dev_ctx->host_stats.total_tx_pkts,
+					  def_dev_ctx->host_stats.total_tx_done_pkts,
+					  def_dev_ctx->host_stats.total_tx_drop_pkts);
+	nrf_wifi_osal_log_info("raw_pkt_stats: total: %u, failure: %u, success: %u",
+					  def_dev_ctx->raw_pkt_stats.raw_pkts_sent,
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_send_failure,
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_send_success);
+	nrf_wifi_osal_log_info("raw_pkt_stats: dbg_1: %u, dbg_2: %u, dbg_3: %u",
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_1,
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_2,
+					  def_dev_ctx->raw_pkt_stats.raw_pkt_fail_dbg_3);
+
+	for (int i = 0; i < 4; i++) {
+		if (def_dev_ctx->raw_pkt_stats.raw_pkts_sent_per_desc[i] != 0) {
+			nrf_wifi_osal_log_info("raw_pkt_stats: desc %d: %u pkts",
+					  i,
+					  def_dev_ctx->raw_pkt_stats.raw_pkts_sent_per_desc[i]);
+		}
+	}
+	unsigned int total_latency = 0;
+	unsigned int count = 0;
+	for (int i = 0; i < MAX_ENTRIES; i++) {
+		if (def_dev_ctx->raw_throughput.last_tx_done_umac_timestamp[i] != 0) {
+			nrf_wifi_osal_log_dbg("raw_throughput: entry %d: %u us",
+					  i,
+					  def_dev_ctx->raw_throughput.last_tx_done_umac_timestamp[i]);
+			total_latency += def_dev_ctx->raw_throughput.last_tx_done_umac_timestamp[i];
+			count++;
+		}
+	}
+	if (count > 0) {
+		unsigned int avg_latency = total_latency / count;
+		nrf_wifi_osal_log_info("raw_throughput: avg latency: %u us (over %u entries)", avg_latency, count);
+	}
+
+	/* Reset counters */
+	memset(&def_dev_ctx->raw_throughput, 0, sizeof(def_dev_ctx->raw_throughput));
+	memset(&def_dev_ctx->raw_pkt_stats, 0, sizeof(def_dev_ctx->raw_pkt_stats));
+	memset(&def_dev_ctx->host_stats, 0, sizeof(def_dev_ctx->host_stats));
+	//bool tx_sent_complete, tx_sent, tx_complete;
+	tx_sent_dbg_1 = 0;
+	tx_sent_dbg_2 = 0;
+	tx_sent_dbg_3 = 0;
+
+	nrf_wifi_osal_spinlock_rel(def_dev_ctx->throughput_read_write_lock);
+
 
 	return status;
 }
